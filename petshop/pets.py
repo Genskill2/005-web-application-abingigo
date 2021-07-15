@@ -10,7 +10,10 @@ bp = Blueprint("pets", "pets", url_prefix="")
 
 def format_date(d):
     if d:
-        d = datetime.datetime.strptime(d, '%Y-%m-%d')
+        if d == 1:
+            d = datetime.datetime.now()
+        else:
+            d = datetime.datetime.strptime(d, '%Y-%m-%d')
         v = d.strftime("%a - %b %d, %Y")
         return v
     else:
@@ -18,8 +21,16 @@ def format_date(d):
 
 @bp.route("/search/<field>/<value>")
 def search(field, value):
-    # TBD
-    return ""
+    conn = db.get_db()
+    cursor = conn.cursor()
+    oby = request.args.get("order_by", "id")
+    order = request.args.get("order", "asc")
+    if field == "tag":
+    	cursor.execute(f"select p.id, p.name, p.bought, p.sold, s.name from pet p, animal s, tag t, tags_pets tp where p.species=s.id and tp.pet=p.id and tp.tag=t.id and t.name = ? order by p.{oby} {order}", [value])
+    else:
+    	cursor.execute(f"select p.id, p.name, p.bought, p.sold, s.name from pet p, animal s, tag t, tags_pets tp where p.{field} = ? order by p.{oby} {order}", [value])
+    pets = cursor.fetchall()
+    return render_template('search.html', pets = pets, field=field, value=value, order="desc" if order=="asc" else "asc")
 
 @bp.route("/")
 def dashboard():
